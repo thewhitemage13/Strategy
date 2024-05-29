@@ -1,110 +1,59 @@
-#include <iostream>
-#include <vector>
-#include <string>
+﻿#include <iostream>
 using namespace std;
 
-enum TimeOfDay { Breakfast, Lunch, Dinner };
+class Reader {
+public:
+    virtual ~Reader(){}
+    virtual void Parse(string& url) = 0;
+};
 
-enum Product { Bread, Mayonnaise, Dumplings, Cheese, Ham, Egg, Tomato };
-
-class Fridge {
+class ResourceReader {
 private:
-    vector<Product> products;
+    Reader* reader;
 public:
-    void AddProduct(Product product) {
-        products.push_back(product);
+    ResourceReader(Reader* r) : reader(r) {};
+    ~ResourceReader() { delete reader; }
+    
+    void SetStrategy(Reader* r) {
+        if (reader != nullptr)delete reader;
+        reader = r;
     }
-
-    bool HasProduct(Product product) const {
-        for (const auto& p : products) {
-            if (p == product) {
-                return true;
-            }
-        }
-        return false;
+    void Read(string& url) {
+        reader->Parse(url);
     }
 };
 
-class CookingStrategy {
+class NewsSiteReader : public Reader {
 public:
-    virtual void cook(const Fridge& fridge) const = 0;
-    virtual ~CookingStrategy() = default;
-};
-
-class BreakfastStrategy : public CookingStrategy {
-public:
-    void cook(const Fridge& fridge) const override {
-        if (fridge.HasProduct(Product::Bread) && fridge.HasProduct(Product::Cheese) && fridge.HasProduct(Product::Ham)) {
-            cout << "Making a ham and cheese sandwich for breakfast.\n";
-        }
-        else if (fridge.HasProduct(Product::Egg)) {
-            cout << "Making scrambled eggs for breakfast.\n";
-        }
-        else {
-            cout << "No ingredients for breakfast.\n";
-        }
+    void Parse(string& url) override {
+        cout << "news site parsing: " << url << "\n";
     }
 };
 
-class LunchStrategy : public CookingStrategy {
+class SocialNetworkReader : public Reader {
 public:
-    void cook(const Fridge& fridge) const override {
-        if (fridge.HasProduct(Product::Dumplings)) {
-            cout << "Cooking dumplings for lunch.\n";
-        }
-        else if (fridge.HasProduct(Product::Tomato) && fridge.HasProduct(Product::Cheese)) {
-            cout << "Making a tomato and cheese salad for lunch.\n";
-        }
-        else {
-            cout << "No ingredients for lunch.\n";
-        }
+    void Parse(string& url) override {
+        cout << "parsing news feed from a social network: " << url << "\n";
     }
 };
 
-class DinnerStrategy : public CookingStrategy {
+class TelegramChannelReader : public Reader {
 public:
-    void cook(const Fridge& fridge) const override {
-        if (fridge.HasProduct(Product::Bread) && fridge.HasProduct(Product::Mayonnaise) && fridge.HasProduct(Product::Ham)) {
-            cout << "Making a ham sandwich for dinner.\n";
-        }
-        else if (fridge.HasProduct(Product::Dumplings)) {
-            cout << "Cooking dumplings for dinner.\n";
-        }
-        else {
-            cout << "No ingredients for dinner.\n";
-        }
-    }
-};
-
-class CookingContext {
-private:
-    CookingStrategy* strategy = nullptr;
-public:
-    void setStrategy(CookingStrategy* strategy) {
-        this->strategy = strategy;
-    }
-
-    void cook(const Fridge& fridge) const {
-        if (strategy) {
-            strategy->cook(fridge);
-        }
-        else {
-            cout << "No cooking strategy set.\n";
-        }
+    void Parse(string& url) override {
+        cout << "Telegram messenger channel parsing: " << url << "\n";
     }
 };
 
 int main() {
-    Fridge fridge;
-    fridge.AddProduct(Product::Bread);
-    fridge.AddProduct(Product::Cheese);
-    fridge.AddProduct(Product::Ham);
+    ResourceReader* res = new ResourceReader(new NewsSiteReader());
+    string url = "https://news.com";
+    res->Read(url);
 
-    CookingContext context;
-    TimeOfDay timeOfDay = TimeOfDay::Breakfast;
-   
-   context.setStrategy(new BreakfastStrategy());   
-   /*context.setStrategy(new LunchStrategy());      
-   context.setStrategy(new DinnerStrategy());*/
-   context.cook(fridge);
+    url = "https://facebook.com";
+    res->SetStrategy(new SocialNetworkReader());
+    res->Read(url);
+
+    url = "@news_channel_telegram";
+    res->SetStrategy(new TelegramChannelReader());
+    res->Read(url);
 }
